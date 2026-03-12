@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#080C10"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>WA Voice AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Arabic:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --green: #25D366;
+    --dark-green: #075E54;
+    --mid-green: #128C7E;
+    --bg: #080C10;
+    --card: rgba(255,255,255,0.045);
+    --border: rgba(255,255,255,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%;
+    background: radial-gradient(ellipse at 30% 20%, #0d2318 0%, var(--bg) 55%);
+    font-family: 'Noto Sans', sans-serif;
+    overflow: hidden;
+  }
+  #app {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    max-width: 480px; margin: 0 auto;
+    background: var(--bg);
+    position: relative; overflow: hidden;
+  }
+
+  /* Animations */
+  @keyframes wavebar { 0%,100%{transform:scaleY(0.4);opacity:0.5} 50%{transform:scaleY(1);opacity:1} }
+  @keyframes ripple { 0%{transform:scale(1);opacity:0.5} 100%{transform:scale(2.5);opacity:0} }
+  @keyframes slideUp { from{transform:translateY(18px);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  @keyframes glow { 0%,100%{box-shadow:0 0 10px rgba(37,211,102,0.3)} 50%{box-shadow:0 0 28px rgba(37,211,102,0.7)} }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 24px 6px; flex-shrink: 0;
+  }
+  .status-time { font-size: 12px; color: rgba(255,255,255,0.5); font-family: 'Syne', sans-serif; font-weight: 600; }
+  .status-notch { width: 80px; height: 24px; background: rgba(0,0,0,0.7); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+  .status-battery { display: flex; gap: 3px; align-items: flex-end; }
+  .status-battery span { width: 3px; border-radius: 1px; background: rgba(255,255,255,0.6); }
+
+  /* Header */
+  .header {
+    padding: 8px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .header-inner { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--dark-green), var(--green));
+    display: flex; align-items: center; justify-content: center;
+    animation: glow 3s ease-in-out infinite;
+  }
+  .logo-text { flex: 1; }
+  .logo-text h1 { font-size: 17px; font-weight: 800; color: white; font-family: 'Syne', sans-serif; letter-spacing: -0.4px; }
+  .logo-text p { font-size: 9px; color: var(--green); font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 1.5px; }
+  .header-btn {
+    width: 36px; height: 36px; border-radius: 11px;
+    background: var(--card); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  /* Scrollable content */
+  .content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+  .content::-webkit-scrollbar { display: none; }
+  .pad { padding: 18px 18px 10px; }
+
+  /* Cards */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 18px;
+    margin-bottom: 12px;
+  }
+  .card-label {
+    font-size: 9px; color: rgba(255,255,255,0.3);
+    font-family: 'Syne', sans-serif; letter-spacing: 1.5px;
+    margin-bottom: 12px; text-transform: uppercase;
+  }
+
+  /* Voice items */
+  .voice-item {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 16px; margin-bottom: 10px;
+    cursor: pointer; width: 100%; text-align: left;
+    transition: all 0.2s; animation: slideUp 0.35s ease both;
+  }
+  .voice-item:active { transform: scale(0.97); background: rgba(37,211,102,0.08); }
+  .voice-item-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .voice-flag { font-size: 24px; }
+  .voice-meta h3 { font-size: 13px; font-weight: 700; color: white; font-family: 'Syne', sans-serif; }
+  .voice-meta p { font-size: 10px; color: rgba(255,255,255,0.4); font-family: 'Syne', sans-serif; margin-top: 2px; }
+  .play-btn {
+    margin-left: auto; width: 34px; height: 34px; border-radius: 10px;
+    background: rgba(37,211,102,0.15); border: 1px solid rgba(37,211,102,0.3);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+
+  /* Wave bars */
+  .wave-bars { display: flex; align-items: center; gap: 3px; height: 28px; }
+  .wave-bar {
+    width: 3px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--green), var(--dark-green));
+    height: 4px; transform-origin: center;
+  }
+  .wave-bar.active {
+    animation: wavebar 0.8s ease-in-out infinite;
+  }
+
+  /* Hero CTA */
+  .hero-cta {
+    border-radius: 24px; padding: 22px 20px; margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--dark-green) 0%, #1a7a6e 50%, var(--green) 100%);
+    position: relative; overflow: hidden; text-align: center;
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .hero-title { font-size: 14px; font-weight: 700; color: white; font-family: 'Syne', sans-serif; position: relative; }
+  .hero-sub { font-size: 11px; color: rgba(255,255,255,0.65); margin-top: 4px; position: relative; }
+
+  /* Processing */
+  .processing-wrap { display: flex; flex-direction: column; align-items: center; padding: 30px 20px 10px; }
+  .progress-ring-wrap { position: relative; margin-bottom: 20px; }
+  .progress-pct {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--green); font-family: 'Syne', sans-serif;
+  }
+  .ripple-ring {
+    position: absolute; border-radius: 50%; border: 1px solid rgba(37,211,102,0.2);
+    animation: ripple 2s ease-out infinite;
+  }
+  .proc-title { font-size: 17px; font-weight: 700; color: white; font-family: 'Syne', sans-serif; margin-top: 16px; margin-bottom: 6px; }
+  .proc-sub { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 24px; }
+  .step-item {
+    width: 100%; display: flex; align-items: center; gap: 12px;
+    padding: 11px 16px; border-radius: 13px;
+    background: var(--card); border: 1px solid var(--border);
+    margin-bottom: 8px; transition: all 0.3s;
+  }
+  .step-item.active { background: rgba(37,211,102,0.1); border-color: rgba(37,211,102,0.3); }
+  .step-item.done { background: rgba(37,211,102,0.06); border-color: rgba(37,211,102,0.2); }
+  .step-dot {
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-dot.pending { border: 2px solid rgba(255,255,255,0.15); }
+  .step-dot.active { border: 2px solid var(--green); border-top-color: transparent; animation: spin 0.8s linear infinite; }
+  .step-dot.done { background: var(--green); }
+  .step-label { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .step-label.active { color: white; font-weight: 600; }
+  .step-label.done { color: rgba(255,255,255,0.7); }
+
+  /* Result */
+  .result-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .lang-badge {
+    padding: 5px 12px; border-radius: 20px;
+    background: rgba(37,211,102,0.12); border: 1px solid rgba(37,211,102,0.3);
+    font-size: 11px; color: var(--green); font-family: 'Syne', sans-serif; font-weight: 700;
+  }
+  .dur-badge { font-size: 10px; color: rgba(255,255,255,0.3); font-family: 'Syne', sans-serif; }
+  .new-btn {
+    margin-left: auto; padding: 5px 12px; border-radius: 10px;
+    background: var(--card); border: 1px solid var(--border);
+    color: rgba(255,255,255,0.5); font-size: 11px; cursor: pointer;
+    font-family: 'Syne', sans-serif;
+  }
+  .new-btn:active { transform: scale(0.95); }
+
+  /* Action buttons */
+  .action-row { display: flex; gap: 8px; margin-top: 12px; }
+  .btn {
+    padding: 10px 14px; border-radius: 12px; font-size: 11px; font-weight: 700;
+    cursor: pointer; font-family: 'Syne', sans-serif; transition: all 0.2s;
+    border: 1px solid var(--border); background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.6);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn.green { background: rgba(37,211,102,0.15); border-color: rgba(37,211,102,0.3); color: var(--green); }
+  .btn.green.copied { background: rgba(37,211,102,0.25); }
+  .btn.primary {
+    background: linear-gradient(135deg, var(--dark-green), var(--green));
+    border: none; color: white; width: 100%; padding: 13px;
+    font-size: 13px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn.primary:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: default; }
+  .btn.flex1 { flex: 1; text-align: center; }
+
+  /* Summary box */
+  .summary-box {
+    margin-top: 12px; padding: 12px 14px; border-radius: 13px;
+    background: rgba(37,211,102,0.08); border: 1px solid rgba(37,211,102,0.2);
+    animation: slideUp 0.3s ease;
+  }
+  .summary-label { font-size: 9px; color: var(--green); font-family: 'Syne', sans-serif; letter-spacing: 1px; margin-bottom: 6px; }
+  .summary-text { font-size: 12px; color: rgba(255,255,255,0.8); line-height: 1.6; }
+
+  /* Lang dropdown */
+  .lang-select-btn {
+    width: 100%; padding: 12px 14px; border-radius: 13px;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    color: white; font-size: 13px; cursor: pointer; text-align: left;
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'Noto Sans', sans-serif; margin-bottom: 10px;
+  }
+  .lang-select-btn.open { border-color: rgba(37,211,102,0.4); }
+  .lang-dropdown {
+    position: absolute; left: 0; right: 0;
+    background: #131a20; border: 1px solid var(--border);
+    border-radius: 14px; z-index: 50; overflow: hidden;
+    animation: slideUp 0.2s ease;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    top: calc(100% + 6px);
+  }
+  .lang-option {
+    width: 100%; padding: 13px 16px; background: transparent;
+    border: none; border-bottom: 1px solid var(--border);
+    color: rgba(255,255,255,0.7); font-size: 13px; cursor: pointer;
+    text-align: left; font-family: 'Noto Sans', sans-serif;
+  }
+  .lang-option:last-child { border-bottom: none; }
+  .lang-option.selected { color: var(--green); background: rgba(37,211,102,0.08); }
+  .lang-option:active { background: rgba(255,255,255,0.05); }
+
+  /* Translation result */
+  .trans-result {
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--border);
+    animation: slideUp 0.3s ease;
+  }
+  .trans-text { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.75; margin-bottom: 10px; }
+
+  /* Textarea */
+  .custom-textarea {
+    width: 100%; background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px; color: white; font-size: 13px; line-height: 1.6;
+    resize: none; height: 100px; font-family: 'Noto Sans', sans-serif;
+    outline: none; margin-bottom: 8px;
+  }
+  .custom-textarea:focus { border-color: rgba(37,211,102,0.4); }
+  .custom-textarea::placeholder { color: rgba(255,255,255,0.25); }
+
+  /* History item */
+  .history-item {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 14px 16px; margin-bottom: 10px;
+    animation: slideUp 0.3s ease both;
+  }
+  .history-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .history-text { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.55; margin-bottom: 10px; }
+
+  /* Spinner */
+  .spinner {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+    animation: spin 0.8s linear infinite; flex-shrink: 0;
+  }
+
+  /* Bottom nav */
+  .bottom-nav {
+    display: flex; border-top: 1px solid var(--border);
+    padding: 10px 0 max(18px, env(safe-area-inset-bottom));
+    background: rgba(8,12,16,0.97); backdrop-filter: blur(20px);
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 4px; background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,0.3); transition: color 0.2s;
+  }
+  .nav-btn.active { color: var(--green); }
+  .nav-btn span { font-size: 9px; font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 0.5px; }
+  .nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* About */
+  .about-feature {
+    display: flex; gap: 14px; padding: 16px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; margin-bottom: 10px;
+    animation: slideUp 0.3s ease both;
+  }
+  .about-icon { font-size: 26px; flex-shrink: 0; }
+  .about-title { font-size: 14px; font-weight: 700; color: white; font-family: 'Syne', sans-serif; margin-bottom: 4px; }
+  .about-desc { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.5; }
+
+  .section-label {
+    font-size: 10px; color: rgba(255,255,255,0.3);
+    font-family: 'Syne', sans-serif; letter-spacing: 1.5px;
+    margin-bottom: 14px; text-transform: uppercase;
+  }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 50px 20px; color: rgba(255,255,255,0.25); font-size: 13px; }
+  .empty-icon { font-size: 44px; margin-bottom: 14px; }
+
+  /* Loading shimmer */
+  .shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px; height: 16px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="status-time" id="clock">9:41</span>
+    <div class="status-notch"></div>
+    <div class="status-battery">
+      <span style="height:4px"></span>
+      <span style="height:6px"></span>
+      <span style="height:8px"></span>
+      <span style="height:10px;opacity:0.3"></span>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+          <path d="M12 1a11 11 0 1 0 0 22A11 11 0 0 0 12 1zm0 2a9 9 0 1 1 0 18A9 9 0 0 1 12 3zm0 3a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V9a3 3 0 0 0-3-3zm0 2a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0V9a1 1 0 0 1 1-1zm-5 5.27A5 5 0 0 0 17 13v-1a1 1 0 0 0-2 0v1a3 3 0 0 1-6 0v-1a1 1 0 0 0-2 0v1c0 2.07 1.26 3.84 3 4.65V19h-1a1 1 0 0 0 0 2h4a1 1 0 0 0 0-2h-1v-1.35z"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>WA Voice AI</h1>
+        <p>VOICE → TEXT ASSISTANT</p>
+      </div>
+      <div class="header-btn" onclick="showTab('info')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" id="content"></div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="showTab('home')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span>Home</span>
+      <div class="nav-dot" id="dot-home"></div>
+    </button>
+    <button class="nav-btn" id="nav-history" onclick="showTab('history')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span>History</span>
+    </button>
+    <button class="nav-btn" id="nav-info" onclick="showTab('info')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>About</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let currentTab = 'home';
+let stage = 'idle'; // idle | processing | result
+let selectedVoice = null;
+let transcription = '';
+let detectedLang = '';
+let translation = '';
+let targetLang = 'English';
+let langPickerOpen = false;
+let history = JSON.parse(localStorage.getItem('waVoiceHistory') || '[]');
+let progressVal = 0;
+let progressStep = 0;
+let progressInterval = null;
+let showCustom = false;
+
+const LANGS = ['বাংলা','English','العربية','हिन्दी','Français','Español','Deutsch','中文'];
+const LANG_FLAGS = {'বাংলা':'🇧🇩','English':'🇬🇧','العربية':'🇸🇦','हिन्दी':'🇮🇳','Français':'🇫🇷','Español':'🇪🇸','Deutsch':'🇩🇪','中文':'🇨🇳'};
+const LANG_NAMES = {'বাংলা':'Bengali','English':'English','العربية':'Arabic','हिन्दी':'Hindi','Français':'French','Español':'Spanish','Deutsch':'German','中文':'Chinese'};
+
+const sampleVoices = [
+  { lang:'বাংলা', flag:'🇧🇩', duration:'0:24', text:'আমি আজকে একটু দেরি করে আসব। রাস্তায় প্রচুর জ্যাম। তুমি কি একটু অপেক্ষা করতে পারবে? আর হ্যাঁ, বাজার থেকে কিছু আনতে হবে কি?' },
+  { lang:'English', flag:'🇬🇧', duration:'0:18', text:"Hey, just checking in about tomorrow's meeting. Can we push it to 3pm instead? I have a call in the morning that might run long. Let me know what works for you." },
+  { lang:'العربية', flag:'🇸🇦', duration:'0:31', text:'مرحبا يا صديقي، كيف حالك؟ أريد أن أخبرك أنني سأتأخر قليلاً في الاجتماع. الطريق مزدحم جداً اليوم. هل يمكنك إخبار الجميع بذلك؟' },
+];
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2,'0');
+  const m = now.getMinutes().toString().padStart(2,'0');
+  const el = document.getElementById('clock');
+  if (el) el.textContent = h + ':' + m;
+}
+setInterval(updateClock, 10000);
+updateClock();
+
+// Wave bars HTML
+function waveBars(active) {
+  const heights = [10,18,14,24,16,20,12,22,14,18,10,16];
+  return `<div class="wave-bars">${heights.map((h,i) =>
+    `<div class="wave-bar ${active?'active':''}" style="height:${h}px;animation-delay:${i*0.07}s"></div>`
+  ).join('')}</div>`;
+}
+
+// SVG icons
+const icons = {
+  play: `<svg width="12" height="12" viewBox="0 0 24 24" fill="#25D366"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  check: `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`,
+  chevDown: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`,
+  chevUp: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(37,211,102,0.7)" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>`,
+  copy: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+  share: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
+};
+
+// ── Claude API ──
+async function callClaude(system, user) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system,
+      messages: [{ role: 'user', content: user }]
+    })
+  });
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+
+// ── Tabs ──
+function showTab(tab) {
+  currentTab = tab;
+  ['home','history','info'].forEach(t => {
+    const btn = document.getElementById('nav-' + t);
+    const dot = document.getElementById('dot-' + t);
+    if (btn) {
+      btn.classList.toggle('active', t === tab);
+      if (dot) dot.style.display = t === tab ? 'block' : 'none';
+    }
+  });
+  // Re-add dot to active tab if missing
+  const activeBtn = document.getElementById('nav-' + tab);
+  if (activeBtn && !activeBtn.querySelector('.nav-dot')) {
+    const d = document.createElement('div');
+    d.className = 'nav-dot';
+    d.id = 'dot-' + tab;
+    activeBtn.appendChild(d);
+  }
+  render();
+}
+
+// ── Process voice ──
+async function processVoice(voice) {
+  selectedVoice = voice;
+  stage = 'processing';
+  progressVal = 0;
+  progressStep = 0;
+  translation = '';
+  render();
+
+  // Progress animation
+  clearInterval(progressInterval);
+  progressInterval = setInterval(() => {
+    progressVal += Math.random() * 12 + 4;
+    if (progressVal >= 95) { progressVal = 95; clearInterval(progressInterval); }
+    progressStep = Math.min(Math.floor(progressVal / 25), 3);
+    updateProgress();
+  }, 350);
+
+  try {
+    const result = await callClaude(
+      `You are a WhatsApp voice transcription AI. Given sample text, return ONLY valid JSON: {"transcription":"...","detected_language":"..."} No markdown, no extra text.`,
+      `Transcribe this voice message: "${voice.text}". Language: ${voice.lang}. Return JSON only.`
+    );
+    clearInterval(progressInterval);
+    progressVal = 100;
+    try {
+      const clean = result.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      transcription = parsed.transcription || voice.text;
+      detectedLang = parsed.detected_language || voice.lang;
+    } catch {
+      transcription = voice.text;
+      detectedLang = voice.lang;
+    }
+  } catch {
+    clearInterval(progressInterval);
+    progressVal = 100;
+    transcription = voice.text;
+    detectedLang = voice.lang;
+  }
+
+  // Save to history
+  history.unshift({ lang: voice.lang, flag: voice.flag, text: transcription, time: 'Just now', duration: voice.duration });
+  if (history.length > 20) history.pop();
+  localStorage.setItem('waVoiceHistory', JSON.stringify(history));
+
+  setTimeout(() => {
+    stage = 'result';
+    render();
+  }, 500);
+}
+
+async function processCustomText() {
+  const ta = document.getElementById('customTextarea');
+  if (!ta || !ta.value.trim()) return;
+  const text = ta.value.trim();
+  processVoice({ lang: 'Auto', flag: '🌐', duration: '?:??', text });
+}
+
+function updateProgress() {
+  const ring = document.getElementById('progress-ring-fill');
+  const pct = document.getElementById('progress-pct');
+  if (ring) {
+    const r = 28, circ = 2 * Math.PI * r;
+    ring.setAttribute('stroke-dashoffset', circ * (1 - progressVal / 100));
+  }
+  if (pct) pct.textContent = Math.round(progressVal) + '%';
+
+  // Update steps
+  const steps = document.querySelectorAll('.step-item');
+  const dots = document.querySelectorAll('.step-dot');
+  const labels = document.querySelectorAll('.step-label');
+  steps.forEach((s, i) => {
+    s.classList.remove('active', 'done');
+    dots[i]?.classList.remove('active', 'done', 'pending');
+    labels[i]?.classList.remove('active', 'done');
+    if (i < progressStep) {
+      s.classList.add('done');
+      dots[i]?.classList.add('done');
+      labels[i]?.classList.add('done');
+      if (dots[i]) dots[i].innerHTML = icons.check;
+    } else if (i === progressStep) {
+      s.classList.add('active');
+      dots[i]?.classList.add('active');
+      labels[i]?.classList.add('active');
+      if (dots[i]) dots[i].innerHTML = '';
+    } else {
+      dots[i]?.classList.add('pending');
+      if (dots[i]) dots[i].innerHTML = '';
+    }
+  });
+}
+
+let translating = false;
+async function doTranslate() {
+  if (!transcription || translating) return;
+  translating = true;
+  translation = '';
+  const btn = document.getElementById('translateBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = `<div class="spinner"></div> Translating...`; }
+
+  try {
+    const result = await callClaude(
+      `You are a professional translator. Translate to ${LANG_NAMES[targetLang]}. Return ONLY the translated text.`,
+      transcription
+    );
+    translation = result.trim();
+  } catch {
+    translation = 'Translation failed. Please try again.';
+  }
+
+  translating = false;
+  renderTranslationResult();
+  if (btn) { btn.disabled = false; btn.innerHTML = `Translate to ${targetLang} →`; }
+}
+
+let summarizing = false;
+let summaryText = '';
+async function doSummary() {
+  if (!transcription || summarizing) return;
+  summarizing = true;
+  const btn = document.getElementById('summaryBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Summarizing...'; }
+
+  try {
+    const result = await callClaude(
+      `Summarize this voice message in 1-2 sentences. Start with a relevant emoji. Return only the summary.`,
+      `Summarize: "${transcription}"`
+    );
+    summaryText = result.trim();
+  } catch {
+    summaryText = '⚠️ Could not generate summary.';
+  }
+
+  summarizing = false;
+  renderSummary();
+  if (btn) { btn.textContent = '✓ Summarized'; }
+}
+
+function renderSummary() {
+  const wrap = document.getElementById('summaryWrap');
+  if (!wrap) return;
+  wrap.innerHTML = summaryText ? `
+    <div class="summary-box">
+      <div class="summary-label">AI SUMMARY</div>
+      <div class="summary-text">${summaryText}</div>
+    </div>` : '';
+}
+
+function renderTranslationResult() {
+  const wrap = document.getElementById('transResultWrap');
+  if (!wrap || !translation) return;
+  wrap.innerHTML = `
+    <div class="trans-result">
+      <p class="trans-text">${translation}</p>
+      <button class="btn green" onclick="copyText('${escStr(translation)}','tcopy')">
+        <span id="tcopy-label">${icons.copy} Copy Translation</span>
+      </button>
+    </div>`;
+}
+
+function selectLang(lang) {
+  targetLang = lang;
+  langPickerOpen = false;
+  translation = '';
+  renderLangSection();
+}
+
+function toggleLangPicker() {
+  langPickerOpen = !langPickerOpen;
+  renderLangSection();
+}
+
+function renderLangSection() {
+  const wrap = document.getElementById('langSection');
+  if (!wrap) return;
+  wrap.innerHTML = buildLangSection();
+}
+
+function buildLangSection() {
+  return `
+    <div style="position:relative">
+      <button class="lang-select-btn ${langPickerOpen?'open':''}" onclick="toggleLangPicker()">
+        <span>${LANG_FLAGS[targetLang]} ${targetLang}</span>
+        ${langPickerOpen ? icons.chevUp : icons.chevDown}
+      </button>
+      ${langPickerOpen ? `<div class="lang-dropdown">
+        ${LANGS.map(l => `<button class="lang-option ${l===targetLang?'selected':''}" onclick="selectLang('${l}')">${LANG_FLAGS[l]} ${l}</button>`).join('')}
+      </div>` : ''}
+    </div>
+    <button id="translateBtn" class="btn primary" onclick="doTranslate()" ${translating?'disabled':''}>
+      ${translating ? `<div class="spinner"></div> Translating...` : `Translate to ${targetLang} →`}
+    </button>
+    <div id="transResultWrap">${translation ? `
+      <div class="trans-result">
+        <p class="trans-text">${translation}</p>
+        <button class="btn green" onclick="copyText('${escStr(translation)}','tcopy')">
+          ${icons.copy} Copy Translation
+        </button>
+      </div>` : ''}</div>`;
+}
+
+function escStr(s) {
+  return s.replace(/'/g,"&#39;").replace(/"/g,"&quot;").replace(/\n/g," ");
+}
+
+let copied = {};
+function copyText(text, id) {
+  const decoded = text.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+  navigator.clipboard?.writeText(decoded).catch(()=>{});
+  const el = document.getElementById(id + '-label');
+  if (el) { el.textContent = '✓ Copied!'; setTimeout(() => { if(el) el.innerHTML = icons.copy + ' Copy'; }, 1500); }
+  const btn = el?.closest('button');
+  if (btn) {
+    btn.classList.add('copied');
+    setTimeout(() => btn?.classList.remove('copied'), 1500);
+  }
+}
+
+// ── Render ──
+function render() {
+  const content = document.getElementById('content');
+  if (!content) return;
+
+  if (currentTab === 'home') {
+    if (stage === 'idle') content.innerHTML = renderIdle();
+    else if (stage === 'processing') content.innerHTML = renderProcessing();
+    else if (stage === 'result') content.innerHTML = renderResult();
+  } else if (currentTab === 'history') {
+    content.innerHTML = renderHistory();
+  } else if (currentTab === 'info') {
+    content.innerHTML = renderInfo();
+  }
+}
+
+function renderIdle() {
+  return `<div class="pad" style="animation:fadeIn 0.3s ease">
+    <div class="hero-cta">
+      <div class="hero-grid"></div>
+      <div class="hero-title">🎙️ Select a Demo Voice Message</div>
+      <div class="hero-sub">or enter your own text below</div>
+    </div>
+
+    ${sampleVoices.map((v,i) => `
+      <button class="voice-item" style="animation-delay:${i*0.08}s" onclick='pickVoice(${i})'>
+        <div class="voice-item-top">
+          <span class="voice-flag">${v.flag}</span>
+          <div class="voice-meta">
+            <h3>${v.lang} Voice Message</h3>
+            <p>⏱ ${v.duration}</p>
+          </div>
+          <div class="play-btn">${icons.play}</div>
+        </div>
+        ${waveBars(false)}
+      </button>`).join('')}
+
+    <button class="voice-item" style="border-style:dashed;border-color:rgba(37,211,102,0.3);text-align:center;animation-delay:0.28s" onclick="toggleCustom()">
+      <span style="font-size:12px;color:#25D366;font-family:'Syne',sans-serif;font-weight:700">✏️ Enter Custom Text to Process</span>
+    </button>
+
+    ${showCustom ? `<div style="animation:slideUp 0.3s ease;margin-bottom:10px">
+      <textarea id="customTextarea" class="custom-textarea" placeholder="Paste or type any text here to translate & summarize..."></textarea>
+      <button class="btn primary" onclick="processCustomText()">Process Text →</button>
+    </div>` : ''}
+  </div>`;
+}
+
+function pickVoice(i) { processVoice(sampleVoices[i]); }
+function toggleCustom() { showCustom = !showCustom; render(); }
+function goIdle() { stage = 'idle'; summaryText = ''; translation = ''; render(); }
+
+function renderProcessing() {
+  const r = 28, circ = 2 * Math.PI * r;
+  const steps = ['Analyzing audio', 'Detecting language', 'Transcribing speech', 'Finalizing'];
+  return `<div class="processing-wrap" style="animation:fadeIn 0.3s ease">
+    <div class="progress-ring-wrap">
+      <div class="ripple-ring" style="inset:-18px"></div>
+      <div class="ripple-ring" style="inset:-32px;animation-delay:0.5s"></div>
+      <svg width="72" height="72" style="transform:rotate(-90deg)">
+        <circle cx="36" cy="36" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+        <circle id="progress-ring-fill" cx="36" cy="36" r="${r}" fill="none" stroke="#25D366" stroke-width="4"
+          stroke-dasharray="${circ}" stroke-dashoffset="${circ}" stroke-linecap="round"
+          style="transition:stroke-dashoffset 0.3s ease"/>
+      </svg>
+      <div class="progress-pct" id="progress-pct">0%</div>
+    </div>
+
+    ${waveBars(true)}
+
+    <div class="proc-title">Transcribing...</div>
+    <div class="proc-sub">AI is analyzing your voice message</div>
+
+    ${steps.map((s,i) => `
+      <div class="step-item" style="animation-delay:${i*0.1}s">
+        <div class="step-dot pending" style="border:2px solid rgba(255,255,255,0.15)"></div>
+        <span class="step-label">${s}</span>
+      </div>`).join('')}
+  </div>`;
+}
+
+function renderResult() {
+  summaryText = '';
+  return `<div class="pad" style="animation:slideUp 0.4s ease">
+    <div class="result-header">
+      <div class="lang-badge">${selectedVoice?.flag} ${detectedLang} Detected</div>
+      <span class="dur-badge">⏱ ${selectedVoice?.duration}</span>
+      <button class="new-btn" onclick="goIdle()">← New</button>
+    </div>
+
+    <!-- Transcription -->
+    <div class="card">
+      <div class="card-label">Transcription</div>
+      <p style="font-size:14px;color:rgba(255,255,255,0.9);line-height:1.75;margin-bottom:14px" id="transText">${transcription}</p>
+      <div class="action-row">
+        <button class="btn green flex1" onclick="copyText('${escStr(transcription)}','copy1')">
+          <span id="copy1-label">${icons.copy} Copy</span>
+        </button>
+        <button class="btn flex1" id="summaryBtn" onclick="doSummary()">✨ Summarize</button>
+      </div>
+      <div id="summaryWrap"></div>
+    </div>
+
+    <!-- Translate -->
+    <div class="card">
+      <div class="card-label">Translate To</div>
+      <div id="langSection">${buildLangSection()}</div>
+    </div>
+
+    <!-- Share -->
+    <div class="action-row" style="margin-bottom:20px">
+      <button class="btn green flex1" onclick="shareWA()">💬 WhatsApp</button>
+      <button class="btn flex1" onclick="shareText()">${icons.share} Share</button>
+    </div>
+  </div>`;
+}
+
+function shareWA() {
+  const text = translation || transcription;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
+function shareText() {
+  const text = translation || transcription;
+  if (navigator.share) {
+    navigator.share({ text }).catch(() => {});
+  } else {
+    copyText(escStr(text), 'share');
+  }
+}
+
+function renderHistory() {
+  return `<div class="pad" style="animation:fadeIn 0.3s ease">
+    <div class="section-label">Voice History</div>
+    ${history.length === 0 ? `<div class="empty"><div class="empty-icon">🎙️</div>No history yet.<br>Process a voice message to see it here.</div>` :
+    history.map((item,i) => `
+      <div class="history-item" style="animation-delay:${i*0.06}s">
+        <div class="history-top">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:16px">${item.flag}</span>
+            <span class="lang-badge" style="font-size:9px">${item.lang}</span>
+          </div>
+          <span style="font-size:10px;color:rgba(255,255,255,0.3);font-family:'Syne',sans-serif">${item.time}</span>
+        </div>
+        <div class="history-text">${item.text.slice(0,120)}${item.text.length>120?'...':''}</div>
+        <button class="btn green" style="font-size:10px;padding:7px 13px" onclick="copyText('${escStr(item.text)}','h${i}')">
+          <span id="h${i}-label">${icons.copy} Copy</span>
+        </button>
+      </div>`).join('')}
+    ${history.length > 0 ? `<button class="btn" style="width:100%;text-align:center;margin-bottom:16px;color:rgba(255,0,0,0.5);border-color:rgba(255,0,0,0.15)" onclick="clearHistory()">🗑 Clear History</button>` : ''}
+  </div>`;
+}
+
+function clearHistory() {
+  history = [];
+  localStorage.removeItem('waVoiceHistory');
+  render();
+}
+
+function renderInfo() {
+  const features = [
+    { icon:'🤖', title:'AI Transcription', desc:'Powered by Claude AI — accurate voice-to-text with slang & regional accent support' },
+    { icon:'🌍', title:'8 Languages', desc:'Bangla, English, Arabic, Hindi, French, Spanish, German, Chinese' },
+    { icon:'✨', title:'Smart Summary', desc:'Get a one-line AI summary of any long voice message instantly' },
+    { icon:'📋', title:'Copy & Share', desc:'Copy text or share directly to WhatsApp or any app' },
+    { icon:'🕐', title:'Voice History', desc:'All your transcriptions saved locally for easy access later' },
+  ];
+  return `<div class="pad" style="animation:fadeIn 0.3s ease">
+    <div class="section-label">About App</div>
+    ${features.map((f,i) => `
+      <div class="about-feature" style="animation-delay:${i*0.07}s">
+        <div class="about-icon">${f.icon}</div>
+        <div>
+          <div class="about-title">${f.title}</div>
+          <div class="about-desc">${f.desc}</div>
+        </div>
+      </div>`).join('')}
+    <div style="margin-top:16px;padding:16px;border-radius:16px;background:rgba(37,211,102,0.07);border:1px solid rgba(37,211,102,0.2);text-align:center">
+      <div style="font-size:12px;color:#25D366;font-family:'Syne',sans-serif;font-weight:700;margin-bottom:4px">WA Voice AI v1.0</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4)">Powered by Claude AI · Built for Bangladesh 🇧🇩</div>
+    </div>
+    <div style="height:16px"></div>
+  </div>`;
+}
+
+// Init
+render();
+// Fix nav dots
+document.querySelectorAll('.nav-btn').forEach(b => {
+  if (!b.classList.contains('active')) {
+    const d = b.querySelector('.nav-dot');
+    if (d) d.remove();
+  }
+});
+</script>
+</body>
+</html>
